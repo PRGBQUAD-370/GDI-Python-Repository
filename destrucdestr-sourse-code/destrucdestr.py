@@ -1,0 +1,121 @@
+import ctypes
+import time
+import random
+import os
+
+user32 = ctypes.windll.user32
+gdi32 = ctypes.windll.gdi32
+kernel32 = ctypes.windll.kernel32
+winmm = ctypes.windll.winmm
+
+ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+
+# MessageBox constants
+MB_OKCANCEL = 0x1
+MB_ICONWARNING = 0x30
+IDCANCEL = 2
+
+# Warning message boxes
+resp = user32.MessageBoxW(
+    0,
+    "This is a malware and should only be executed in a safe virtual envoirment.",
+    "destrucdestr.exe",
+    MB_OKCANCEL | MB_ICONWARNING
+)
+
+if resp == IDCANCEL:
+    exit()
+
+resp = user32.MessageBoxW(
+    0,
+    "This is malware no Joke it distroyes the MBR and boot sectors.",
+    "destrucdestr.exe",
+    MB_OKCANCEL | MB_ICONWARNING
+)
+
+if resp == IDCANCEL:
+    exit()
+
+# ---- PLAY WAV AUDIO ----
+audio_file = os.path.abspath("audio.wav")
+winmm.mciSendStringW(f'open "{audio_file}" type mpegvideo alias wav', None, 0, None)
+winmm.mciSendStringW("play wav repeat", None, 0, None)
+
+# Screen info
+width = user32.GetSystemMetrics(0)
+height = user32.GetSystemMetrics(1)
+hdc = user32.GetDC(0)
+
+# GDI raster operations
+effects = [
+    0x00440022,  # SRCINVERT
+    
+]
+
+start_time = time.time()
+duration = 120
+effect_duration = 30
+effect_index = 0
+last_switch = start_time
+
+# ---- SCREEN REFRESH TIMER (NEW) ----
+last_refresh = start_time
+refresh_interval = 5  # seconds
+
+# RedrawWindow flags
+RDW_INVALIDATE = 0x0001
+RDW_ERASE = 0x0004
+RDW_ALLCHILDREN = 0x0080
+
+try:
+    while time.time() - start_time < duration:
+        now = time.time()
+
+        if now - last_switch >= effect_duration:
+            effect_index = (effect_index + 1) % len(effects)
+            last_switch = now
+
+        # ---- FORCE SCREEN REFRESH EVERY 5 SECONDS ----
+        if now - last_refresh >= refresh_interval:
+            user32.RedrawWindow(
+                0,
+                None,
+                None,
+                RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN
+            )
+            last_refresh = now
+
+        effect = effects[effect_index]
+
+        x = random.randint(-40, 40)
+        y = random.randint(-40, 40)
+
+        gdi32.BitBlt(
+            hdc,
+            x,
+            y,
+            width,
+            height,
+            hdc,
+            0,
+            0,
+            effect
+        )
+
+        time.sleep(0.03)
+
+except KeyboardInterrupt:
+    pass
+
+# Cleanup
+user32.ReleaseDC(0, hdc)
+
+winmm.mciSendStringW("stop wav", None, 0, None)
+winmm.mciSendStringW("close wav", None, 0, None)
+
+user32.MessageBoxW(
+    0,
+    "Distruction Complete your device will not boot up after restart there's no way of finding the creator of this malware because the person is unknown but this program was not resonsible for the damages made because you decided to execute it.",
+    "Done",
+    0
+)

@@ -1,0 +1,1 @@
+This is just s full prank on your friends the dangerous one is actualy not dangerous at all and just runs as adminstrator nothing to worry about
